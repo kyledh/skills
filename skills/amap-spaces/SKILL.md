@@ -5,7 +5,6 @@ homepage: https://lbs.amap.com/
 metadata:
   {
     "openclaw": {
-      "emoji": "🧭",
       "requires": { "bins": ["amap"], "env": ["AMAP_WEB_API_KEY"] },
       "primaryEnv": "AMAP_WEB_API_KEY",
       "install": [
