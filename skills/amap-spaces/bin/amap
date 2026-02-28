@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /*
   amap - tiny CLI for AMap (Gaode) Web Service APIs
-  Requires env: AMAP_WEB_API_KEY
+  Requires env: AMAP_API_KEY
 */
 
 const { argv, env, exit } = process;
@@ -19,7 +19,7 @@ Usage:
   amap regeo --lat <lat> --lng <lng> [--radius M] [--extensions all|base] [--json]
 
 Env:
-  AMAP_WEB_API_KEY=... (Gaode Web Service API key)
+  AMAP_API_KEY=... (Gaode Web Service API key)
 `);
   process.exit(code);
 }
@@ -27,7 +27,7 @@ Env:
 function getKey() {
   // Prefer env var (easy to override / safest for automation), but allow fallback
   // to OpenClaw config: ~/.openclaw/openclaw.json -> skills.entries["amap-web"].apiKey
-  let key = env.AMAP_WEB_API_KEY;
+  let key = env.AMAP_API_KEY;
   if (!key) {
     try {
       const fs = require('node:fs');
@@ -39,7 +39,7 @@ function getKey() {
       key = cfg?.skills?.entries?.['amap-web']?.apiKey;
     } catch {}
   }
-  if (!key) usage(2, 'amap: missing api key (set AMAP_WEB_API_KEY or skills.entries["amap-web"].apiKey in ~/.openclaw/openclaw.json)');
+  if (!key) usage(2, 'amap: missing api key (set AMAP_API_KEY or skills.entries["amap-web"].apiKey in ~/.openclaw/openclaw.json)');
   return key;
 }
 

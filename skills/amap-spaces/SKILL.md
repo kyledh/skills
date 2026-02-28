@@ -5,8 +5,8 @@ homepage: https://lbs.amap.com/
 metadata:
   {
     "openclaw": {
-      "requires": { "bins": ["amap"], "env": ["AMAP_WEB_API_KEY"] },
-      "primaryEnv": "AMAP_WEB_API_KEY",
+      "requires": { "bins": ["amap"], "env": ["AMAP_API_KEY"] },
+      "primaryEnv": "AMAP_API_KEY",
       "install": [
         {
           "id": "local-node",
@@ -26,7 +26,7 @@ metadata:
 
 ## Prereq
 
-- 环境变量 `AMAP_WEB_API_KEY` 必须设置（高德 Web 服务 Key）
+- 环境变量 `AMAP_API_KEY` 必须设置（高德 Web 服务 Key）
 
 ## Commands
 

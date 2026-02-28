@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Minimal M-Team API probe with guardrails.
+"""Minimal M-Team API probe with guardrails + conservative rate limiting.
 
 Usage:
   python3 scripts/mteam_api_probe.py --base https://api.m-team.cc --api-key xxx --method POST --path /api/member/profile --json '{}'
@@ -9,6 +9,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import random
 import sys
@@ -16,12 +17,15 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 
 BLOCKED_PREFIXES = ("/api/admin/", "/admin/")
 BLOCKED_EXACT = {"/api/login", "/login", "/api/apikey", "/apikey"}
 DEFAULT_USER_AGENT = "Mozilla/5.0"
+STATE_FILE = Path.home() / ".cache" / "pt-mteam-rate.json"
+LOCK_FILE = Path.home() / ".cache" / "pt-mteam-rate.lock"
 
 
 @dataclass
@@ -68,6 +72,58 @@ def request_once(
         return resp.status, text, int((time.time() - started) * 1000)
 
 
+def _bucket_for_path(path: str) -> str:
+    p = normalize_path(path)
+    if p.startswith("/api/torrent/search") or p.startswith("/torrent/search"):
+        return "torrent_search"
+    if p.startswith("/api/torrent/detail") or p.startswith("/torrent/detail"):
+        return "torrent_detail"
+    return "default"
+
+
+def _interval_for_bucket(bucket: str, args) -> float:
+    if bucket == "torrent_search":
+        return max(0.0, float(args.search_interval))
+    if bucket == "torrent_detail":
+        return max(0.0, float(args.detail_interval))
+    return max(0.0, float(args.min_interval))
+
+
+def _load_state(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return {}
+
+
+def _save_state(path: Path, state: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(state, ensure_ascii=False))
+
+
+def enforce_rate_limit(path: str, args) -> None:
+    bucket = _bucket_for_path(path)
+    interval = _interval_for_bucket(bucket, args)
+    if interval <= 0:
+        return
+
+    LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with LOCK_FILE.open("a+") as lf:
+        fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+        state = _load_state(STATE_FILE)
+        now = time.time()
+        last = float(state.get(bucket, 0) or 0)
+        wait = interval - (now - last)
+        if wait > 0:
+            time.sleep(wait)
+            now = time.time()
+        state[bucket] = now
+        _save_state(STATE_FILE, state)
+        fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", required=True, help="e.g. https://api.m-team.cc")
@@ -78,6 +134,9 @@ def main() -> int:
     ap.add_argument("--timeout", type=int, default=15)
     ap.add_argument("--max-retries", type=int, default=3)
     ap.add_argument("--user-agent", default=DEFAULT_USER_AGENT, help="HTTP User-Agent header")
+    ap.add_argument("--min-interval", type=float, default=1.0, help="default min interval seconds")
+    ap.add_argument("--detail-interval", type=float, default=36.0, help="/torrent/detail min interval seconds")
+    ap.add_argument("--search-interval", type=float, default=90.0, help="/torrent/search min interval seconds")
     args = ap.parse_args()
 
     try:
@@ -94,6 +153,9 @@ def main() -> int:
             return 2
 
     policy = RetryPolicy(max_retries=max(0, args.max_retries))
+
+    # Cross-process rate limit (conservative defaults from public guidance)
+    enforce_rate_limit(args.path, args)
 
     for attempt in range(policy.max_retries + 1):
         try:

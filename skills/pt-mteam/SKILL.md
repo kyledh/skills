@@ -55,8 +55,9 @@ python3 scripts/mteam_api_probe.py \
 - 不用 cookie 模式伪装第三方工具，统一用 `x-api-key`
 - 遇到 401/403：停止重试并提示用户检查 token/权限
 - 实施限速：
-  - 默认最小间隔 `>= 1s/请求`
-  - 对 `/torrent/search`、`/torrent/detail` 做额外节流
+  - 默认最小间隔 `>= 1s/请求`（脚本已实现跨进程限流）
+  - `/torrent/detail` 默认 `>= 36s/次`
+  - `/torrent/search` 默认 `>= 90s/次`（保守值，可通过参数调整）
 
 ## 4) 推荐实践
 
