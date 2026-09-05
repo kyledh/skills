@@ -44,6 +44,12 @@ python3 scripts/market_quote.py --provider longbridge --symbol 3690.HK --asset k
 - IBKR: `IBKR_HOST` `IBKR_PORT` `IBKR_CLIENT_ID`
 - Longbridge(OpenAPI): `LONGPORT_APP_KEY` `LONGPORT_APP_SECRET` `LONGPORT_ACCESS_TOKEN`
 
+## 输出与错误
+
+- 成功：stdout 一行 JSON，含 `routed_provider` / `tried_providers`；若经过兜底，`fallback_errors` 记录各渠道失败原因。
+- 失败：stderr 输出 `{"error": ...}`，退出码 1。所有渠道失败时 error 中含每个渠道的具体报错。
+- 数值字段缺失或为 NaN 时输出 `null`。
+
 ## 护栏
 
 - 仅做查询，不下单。

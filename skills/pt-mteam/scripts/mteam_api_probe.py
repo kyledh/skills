@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Minimal M-Team API probe with guardrails + conservative rate limiting.
 
-Usage:
-  python3 scripts/mteam_api_probe.py --base https://api.m-team.cc --api-key xxx --method POST --path /api/member/profile --json '{}'
-  python3 scripts/mteam_api_probe.py --base https://api.m-team.cc --api-key xxx --method POST --path /api/torrent/search --json '{"keyword":"test"}'
+Usage (MTEAM_API_KEY in env):
+  python3 scripts/mteam_api_probe.py --method POST --path /api/member/profile --json '{}'
+  python3 scripts/mteam_api_probe.py --method POST --path /api/torrent/search --json '{"keyword":"test"}'
+
+Rate-limit state lives in ~/.cache/pt-mteam-rate.json (POSIX file lock; macOS/Linux).
 """
 
 from __future__ import annotations
@@ -11,6 +13,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import json
+import os
 import random
 import sys
 import time
@@ -21,8 +24,9 @@ from pathlib import Path
 from typing import Optional
 
 
-BLOCKED_PREFIXES = ("/api/admin/", "/admin/")
+BLOCKED_PREFIXES = ("/api/admin/", "/admin/", "/api/apikey/", "/apikey/")
 BLOCKED_EXACT = {"/api/login", "/login", "/api/apikey", "/apikey"}
+DEFAULT_BASE = "https://api.m-team.cc"
 DEFAULT_USER_AGENT = "Mozilla/5.0"
 STATE_FILE = Path.home() / ".cache" / "pt-mteam-rate.json"
 LOCK_FILE = Path.home() / ".cache" / "pt-mteam-rate.lock"
@@ -126,8 +130,8 @@ def enforce_rate_limit(path: str, args) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base", required=True, help="e.g. https://api.m-team.cc")
-    ap.add_argument("--api-key", required=True)
+    ap.add_argument("--base", default=os.environ.get("MTEAM_API_BASE") or DEFAULT_BASE, help=f"API base URL (default: $MTEAM_API_BASE or {DEFAULT_BASE})")
+    ap.add_argument("--api-key", default=None, help="API key; prefer env MTEAM_API_KEY so the secret never appears in argv/shell history")
     ap.add_argument("--method", default="GET", choices=["GET", "POST", "PUT", "DELETE"])
     ap.add_argument("--path", required=True, help="e.g. /api/member/profile")
     ap.add_argument("--json", default=None, help="raw JSON string for request body")
@@ -138,6 +142,11 @@ def main() -> int:
     ap.add_argument("--detail-interval", type=float, default=36.0, help="/torrent/detail min interval seconds")
     ap.add_argument("--search-interval", type=float, default=90.0, help="/torrent/search min interval seconds")
     args = ap.parse_args()
+
+    api_key = (args.api_key or os.environ.get("MTEAM_API_KEY") or "").strip()
+    if not api_key:
+        print(json.dumps({"ok": False, "error": "missing API key: set MTEAM_API_KEY (or pass --api-key)"}, ensure_ascii=False))
+        return 2
 
     try:
         assert_allowed(args.path)
@@ -161,7 +170,7 @@ def main() -> int:
         try:
             status, text, elapsed_ms = request_once(
                 base=args.base,
-                api_key=args.api_key,
+                api_key=api_key,
                 method=args.method,
                 path=args.path,
                 body=args.json,

@@ -35,9 +35,8 @@ import urllib.request
 import http.cookiejar
 
 # Reuse station resolving + cookie strategy from query_tickets.py
+from stations import load_stations, resolve_station, normalize_date, validate_query_date  # type: ignore
 from query_tickets import (  # type: ignore
-    load_stations,
-    resolve_station,
     get_cookie,
     http_get_json,
     build_url,
@@ -142,13 +141,19 @@ def format_stops(stops: List[Dict[str, Any]]) -> str:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--date", required=True, help="YYYY-MM-DD")
+    ap.add_argument("--date", default="", help="YYYY-MM-DD (or M-D/M.D/M/D; optional; defaults to tomorrow)")
     ap.add_argument("--from", dest="from_station", required=True, help="Chinese station name or code")
     ap.add_argument("--to", dest="to_station", required=True, help="Chinese station name or code")
     ap.add_argument("--train-code", default="", help="Visible train code, e.g. K4409/G175")
     ap.add_argument("--train-no", default="", help="Internal train_no (if already known)")
     ap.add_argument("--purpose", default="ADULT")
     args = ap.parse_args()
+
+    args.date = normalize_date(args.date)
+    try:
+        validate_query_date(args.date)
+    except ValueError as e:
+        raise SystemExit(str(e))
 
     stations = load_stations()
     from_name, from_code = resolve_station(stations, args.from_station)
@@ -168,9 +173,6 @@ def main():
     data = resp.get("response")
     d = data.get("data") if isinstance(data, dict) else None
     stops = d.get("data") if isinstance(d, dict) else None
-    if not isinstance(stops, list):
-        # try alternative key
-        stops = d.get("data") if isinstance(d, dict) else []
 
     print(f"{args.date} {from_name}({from_code}) → {to_name}({to_code})")
     if args.train_code:

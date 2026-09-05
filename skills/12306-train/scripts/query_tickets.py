@@ -16,9 +16,8 @@ import argparse
 import json
 import os
 import random
-import re
 import time
-from datetime import date as Date, datetime, timedelta
+from datetime import date as Date
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -33,32 +32,8 @@ REF_DIR = SKILL_ROOT / "references"
 CACHE_DIR = SKILL_ROOT / ".cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-STATIONS_JSON = REF_DIR / "stations.json"
-
-
-def load_stations() -> Dict[str, str]:
-    if not STATIONS_JSON.exists():
-        raise FileNotFoundError(f"Missing station cache: {STATIONS_JSON}. Run update_stations.py first.")
-    return json.loads(STATIONS_JSON.read_text(encoding="utf-8"))
-
-
-def resolve_station(stations: Dict[str, str], s: str) -> Tuple[str, str]:
-    s2 = s.strip()
-    if len(s2) in (3, 4) and s2.isascii() and s2.isalpha():
-        return s2, s2.upper()
-    if s2 in stations:
-        return s2, stations[s2].upper()
-    hits = [(n, c) for n, c in stations.items() if s2 in n]
-    if len(hits) == 1:
-        n, c = hits[0]
-        return n, c.upper()
-    if len(hits) > 1:
-        raise ValueError(
-            f"Ambiguous station '{s2}'. Candidates: "
-            + ", ".join([f"{n}({c})" for n, c in sorted(hits)[:12]])
-            + (" ..." if len(hits) > 12 else "")
-        )
-    raise ValueError(f"Unknown station '{s2}'.")
+# Station resolving + date helpers are shared via stations.py
+from stations import load_stations, resolve_station, normalize_date, validate_query_date  # noqa: E402
 
 
 QUERY_ENDPOINTS = [
@@ -221,9 +196,11 @@ def query(q: QueryArgs, from_code: str, to_code: str, retries: int = 3) -> Dict[
                 # refresh cookie if stale
                 ensure_cookie(force=False)
                 data = http_get_json(url)
-                if isinstance(data, dict) and data.get("status") is True and "data" in data:
+                if isinstance(data, dict) and data.get("status") is True and isinstance(data.get("data"), dict):
                     return {"endpoint": ep, "url": url, "response": data}
-                return {"endpoint": ep, "url": url, "response": data}
+                # JSON but not a success payload (e.g. {"status":false,"messages":[...]}): try next endpoint
+                msgs = data.get("messages") if isinstance(data, dict) else None
+                raise ValueError(f"12306 returned non-success JSON: messages={msgs} keys={list(data)[:6] if isinstance(data, dict) else type(data).__name__}")
             except Exception as e:
                 last_err = e
                 # If we got HTML/non-JSON, refresh cookie and try again.
@@ -504,47 +481,13 @@ def main():
     ap.add_argument("--json-out", default="", help="Write full JSON to path")
     args = ap.parse_args()
 
-    # Basic date handling/validation (12306 typically only supports querying near-term window)
-    # 12306 "15-day" window is commonly interpreted as **including today**.
-    # That means the latest allowed date is: today + 14 days.
     today = Date.today()
-    used_default_date = False
-
-    def normalize_date(s: str) -> str:
-        s = (s or "").strip()
-        if not s:
-            return ""
-        # Accept YYYY-MM-DD
-        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", s):
-            return s
-        # Accept M-D / M.D / M/D (assume current year)
-        m = re.fullmatch(r"(\d{1,2})[./-](\d{1,2})", s)
-        if m:
-            mm = int(m.group(1))
-            dd = int(m.group(2))
-            return f"{today.year:04d}-{mm:02d}-{dd:02d}"
-        return s
-
-    if not args.date:
-        # Default to tomorrow: today may be too late (trains departed / not representative)
-        args.date = (today + timedelta(days=1)).isoformat()
-        used_default_date = True
-    else:
-        args.date = normalize_date(args.date)
-
+    used_default_date = not args.date
+    args.date = normalize_date(args.date, today)
     try:
-        qd = datetime.strptime(args.date, "%Y-%m-%d").date()
-    except Exception:
-        raise SystemExit("Invalid --date. Expected YYYY-MM-DD (or M-D / M.D / M/D)")
-
-    if qd < today:
-        raise SystemExit(f"Date {args.date} is in the past (today={today.isoformat()})")
-
-    latest = today + timedelta(days=14)
-    if qd > latest:
-        raise SystemExit(
-            f"Date {args.date} is too far in the future for reliable 12306 query window (latest={latest.isoformat()})"
-        )
+        validate_query_date(args.date, today)
+    except ValueError as e:
+        raise SystemExit(str(e))
 
     stations = load_stations()
     from_name, from_code = resolve_station(stations, args.from_station)

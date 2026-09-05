@@ -73,7 +73,7 @@ python3 scripts/query_transfer.py --date 2026-02-25 --from 密云 --to 锦州 --
 ## 目录结构
 
 - `scripts/update_stations.py`：更新站点缓存
-- `scripts/stations.py`：站点搜索/解析辅助
+- `scripts/stations.py`：站点搜索/解析 + 日期规范化（其余脚本共用）
 - `scripts/query_tickets.py`：直达查询
 - `scripts/query_transfer.py`：中转换乘查询
 - `scripts/query_route_stations.py`：车次经停站查询

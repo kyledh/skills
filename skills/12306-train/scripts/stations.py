@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
+import re
+from datetime import date as Date, datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -71,6 +72,39 @@ def resolve_station(stations: Dict[str, str], s: str) -> Tuple[str, str]:
         )
 
     raise ValueError(f"Unknown station '{s2}'. Run update_stations.py and try again.")
+
+
+# 12306 only sells tickets inside a near-term window; commonly "15 days including today".
+QUERY_WINDOW_DAYS = 14
+
+
+def normalize_date(s: str, today: Date | None = None) -> str:
+    """Accept YYYY-MM-DD or M-D / M.D / M/D (current year). Empty -> tomorrow."""
+    today = today or Date.today()
+    s = (s or "").strip()
+    if not s:
+        return (today + timedelta(days=1)).isoformat()
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", s):
+        return s
+    m = re.fullmatch(r"(\d{1,2})[./-](\d{1,2})", s)
+    if m:
+        return f"{today.year:04d}-{int(m.group(1)):02d}-{int(m.group(2)):02d}"
+    return s
+
+
+def validate_query_date(s: str, today: Date | None = None) -> Date:
+    """Parse a normalized date and enforce the 12306 query window. Raises ValueError."""
+    today = today or Date.today()
+    try:
+        d = datetime.strptime(s, "%Y-%m-%d").date()
+    except Exception:
+        raise ValueError(f"Invalid date '{s}'. Expected YYYY-MM-DD (or M-D / M.D / M/D)")
+    if d < today:
+        raise ValueError(f"Date {s} is in the past (today={today.isoformat()})")
+    latest = today + timedelta(days=QUERY_WINDOW_DAYS)
+    if d > latest:
+        raise ValueError(f"Date {s} is beyond the 12306 query window (latest={latest.isoformat()})")
+    return d
 
 
 def cmd_search(keyword: str) -> None:

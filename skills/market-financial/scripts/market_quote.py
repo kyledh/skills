@@ -13,10 +13,12 @@ def now_iso():
 
 
 def _f(v):
+    """float or None; NaN/inf become None so JSON output stays valid."""
     try:
         if v is None:
             return None
-        return float(v)
+        x = float(v)
+        return x if x == x and x not in (float("inf"), float("-inf")) else None
     except Exception:
         return None
 
@@ -25,7 +27,10 @@ def _i(v):
     try:
         if v is None:
             return None
-        return int(v)
+        x = float(v)
+        if x != x:
+            return None
+        return int(x)
     except Exception:
         return None
 
@@ -51,7 +56,9 @@ def fetch_okx(symbol: str):
     inst = symbol.upper()
     url = f"https://www.okx.com/api/v5/market/ticker?instId={urllib.parse.quote(inst)}"
     j = http_get_json(url)
-    row = (j.get("data") or [{}])[0]
+    if str(j.get("code")) != "0" or not j.get("data"):
+        raise RuntimeError(f"okx: no ticker for {inst} (code={j.get('code')} msg={j.get('msg')})")
+    row = j["data"][0]
     return {
         "skill": "market-financial",
         "provider": "okx",
@@ -70,7 +77,7 @@ def fetch_yfinance_stock(symbol: str):
     try:
         import yfinance as yf
     except Exception:
-        raise RuntimeError("yfinance not installed. Run: source .venv/bin/activate && pip install yfinance")
+        raise RuntimeError("yfinance not installed. Run: pip install yfinance (or pip install -r requirements.txt)")
 
     t = yf.Ticker(symbol)
     fi = getattr(t, "fast_info", None) or {}
@@ -105,7 +112,7 @@ def fetch_yfinance_option(symbol: str, expiry: str, strike: float, right: str):
     try:
         import yfinance as yf
     except Exception:
-        raise RuntimeError("yfinance not installed. Run: source .venv/bin/activate && pip install yfinance")
+        raise RuntimeError("yfinance not installed. Run: pip install yfinance (or pip install -r requirements.txt)")
 
     t = yf.Ticker(symbol)
     chain = t.option_chain(expiry)
@@ -445,7 +452,7 @@ def main():
         fallbacks = []
 
     tried = []
-    last_err = None
+    errors = {}
     for pvd in [provider] + fallbacks:
         tried.append(pvd)
         try:
@@ -453,12 +460,14 @@ def main():
             out["routed_provider"] = pvd
             out["route_mode"] = "configured" if args.provider is None else "explicit"
             out["tried_providers"] = tried
+            if errors:
+                out["fallback_errors"] = errors
             break
         except Exception as e:
-            last_err = e
+            errors[pvd] = f"{type(e).__name__}: {e}"
             continue
     else:
-        raise RuntimeError(f"all providers failed: {tried}; last_error={last_err}")
+        raise RuntimeError(f"all providers failed: {json.dumps(errors, ensure_ascii=False)}")
 
     if args.pretty:
         print(json.dumps(out, ensure_ascii=False, indent=2))

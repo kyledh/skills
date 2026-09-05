@@ -10,7 +10,9 @@ homepage: https://lbs.amap.com/
 
 ## Prereq
 
-- 环境变量 `AMAP_API_KEY` 必须设置（高德 Web 服务 Key）
+- Node.js 18+（使用内置 `fetch`）
+- 环境变量 `AMAP_API_KEY` 必须设置（高德 Web 服务 Key）；可选 `AMAP_TIMEOUT_MS`（默认 15000）
+- 可执行文件在 `bin/amap`：直接 `./bin/amap ...`，或把 `bin/` 加入 PATH 后按下文 `amap ...` 调用
 
 ## Commands
 
@@ -36,3 +38,7 @@ homepage: https://lbs.amap.com/
 ## Output
 
 默认人类可读；加 `--json` 输出 JSON，方便脚本处理。
+
+## Errors
+
+高德业务错误（如 `INVALID_USER_KEY`、`DAILY_QUERY_OVER_LIMIT`）会以非零退出码 + `AMap error <infocode>: <info>` 输出到 stderr，不会静默返回空结果。

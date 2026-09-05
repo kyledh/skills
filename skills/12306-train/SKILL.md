@@ -16,7 +16,7 @@ description: Query China Railway 12306 train tickets (direct + transfer) with re
 
 - **Do not** implement buying tickets, account login, captcha bypass, or aggressive concurrency.
 - Default to **low frequency**: cache identical queries for ~60s; back off on errors.
-- If 12306 blocks or returns unexpected data, **fail gracefully** and suggest manual check.
+- If 12306 blocks or returns unexpected data, **fail gracefully** and suggest manual check. Error responses are never cached; only successful JSON results are (60s for tickets, 120s for transfer).
 
 ## Quick usage
 
@@ -51,7 +51,10 @@ python3 scripts/query_route_stations.py --date 2026-03-01 --from 北京朝阳 --
 
 ### 4) Query transfer (interline) tickets (only when user allows/asks)
 
+All scripts accept `--date` as `YYYY-MM-DD` or `M-D` / `M.D` / `M/D`; omit it to query tomorrow. Dates must be within today ~ today+14.
+
 ```bash
+python3 scripts/query_transfer.py --from 密云 --to 锦州 --limit 10  # date omitted → tomorrow
 python3 scripts/query_transfer.py --date 2026-02-25 --from 密云 --to 锦州 --limit 10
 python3 scripts/query_transfer.py --date 2026-02-25 --from 密云 --to 锦州 --middle 承德南 --limit 10
 ```

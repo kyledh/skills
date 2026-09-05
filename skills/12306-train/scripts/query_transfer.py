@@ -31,8 +31,6 @@ REF_DIR = SKILL_ROOT / "references"
 CACHE_DIR = SKILL_ROOT / ".cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-STATIONS_JSON = REF_DIR / "stations.json"
-
 API_BASE = "https://kyfw.12306.cn"
 LCQUERY_INIT_URL = f"{API_BASE}/otn/lcQuery/init"
 
@@ -46,42 +44,7 @@ COMMON_HEADERS = {
 }
 
 
-def load_stations() -> Dict[str, str]:
-    if not STATIONS_JSON.exists():
-        raise FileNotFoundError(f"Missing station cache: {STATIONS_JSON}. Run update_stations.py first.")
-    return json.loads(STATIONS_JSON.read_text(encoding="utf-8"))
-
-
-def invert(stations: Dict[str, str]) -> Dict[str, List[str]]:
-    inv: Dict[str, List[str]] = {}
-    for name, code in stations.items():
-        inv.setdefault(code.upper(), []).append(name)
-    return inv
-
-
-def resolve_station(stations: Dict[str, str], s: str) -> Tuple[str, str]:
-    s2 = s.strip()
-    if not s2:
-        raise ValueError("Empty station")
-    if len(s2) in (3, 4) and s2.isascii() and s2.isalpha():
-        code = s2.upper()
-        inv = invert(stations)
-        if code in inv:
-            return inv[code][0], code
-        return s2, code
-    if s2 in stations:
-        return s2, stations[s2].upper()
-    hits = [(n, c) for n, c in stations.items() if s2 in n]
-    if len(hits) == 1:
-        n, c = hits[0]
-        return n, c.upper()
-    if len(hits) > 1:
-        raise ValueError(
-            f"Ambiguous station '{s2}'. Candidates: "
-            + ", ".join([f"{n}({c})" for n, c in sorted(hits)[:12]])
-            + (" ..." if len(hits) > 12 else "")
-        )
-    raise ValueError(f"Unknown station '{s2}'.")
+from stations import load_stations, resolve_station, normalize_date, validate_query_date  # noqa: E402
 
 
 def fetch(url: str, headers: Dict[str, str], timeout: int = 15) -> str:
@@ -165,7 +128,7 @@ def summarize_interline(items: List[Dict[str, Any]], limit: int = 10) -> str:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--date", required=True, help="YYYY-MM-DD")
+    ap.add_argument("--date", default="", help="YYYY-MM-DD (or M-D/M.D/M/D; optional; defaults to tomorrow)")
     ap.add_argument("--from", dest="from_station", required=True, help="Chinese station name or code")
     ap.add_argument("--to", dest="to_station", required=True, help="Chinese station name or code")
     ap.add_argument("--middle", default="", help="Optional middle station (name or code)")
@@ -173,6 +136,13 @@ def main():
     ap.add_argument("--limit", type=int, default=10, help="Max transfer plans to show")
     ap.add_argument("--cache-ttl", type=int, default=120, help="Cache TTL seconds")
     args = ap.parse_args()
+
+    used_default_date = not args.date
+    args.date = normalize_date(args.date)
+    try:
+        validate_query_date(args.date)
+    except ValueError as e:
+        raise SystemExit(str(e))
 
     stations = load_stations()
     from_name, from_code = resolve_station(stations, args.from_station)
@@ -187,7 +157,7 @@ def main():
     if cache_path.exists() and (time.time() - cache_path.stat().st_mtime) <= args.cache_ttl:
         out = json.loads(cache_path.read_text(encoding="utf-8"))
         out["meta"]["cached"] = True
-        print(f"{args.date} {from_name}({from_code}) → {to_name}({to_code})")
+        print(f"{args.date} {from_name}({from_code}) → {to_name}({to_code})" + ("  (默认查询明天)" if used_default_date else ""))
         if mid_code:
             print(f"指定中转：{mid_name}({mid_code})")
         print(out.get("summary", ""))
@@ -269,7 +239,7 @@ def main():
     }
     cache_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(f"{args.date} {from_name}({from_code}) → {to_name}({to_code})")
+    print(f"{args.date} {from_name}({from_code}) → {to_name}({to_code})" + ("  (默认查询明天)" if used_default_date else ""))
     if mid_code:
         print(f"指定中转：{mid_name}({mid_code})")
     print(summary)

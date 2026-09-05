@@ -5,6 +5,7 @@
 */
 
 const { argv, env, exit } = process;
+const TIMEOUT_MS = Number(env.AMAP_TIMEOUT_MS || 15000);
 
 function usage(code = 0, msg) {
   if (msg) console.error(msg);
@@ -20,6 +21,7 @@ Usage:
 
 Env:
   AMAP_API_KEY=... (Gaode Web Service API key)
+  AMAP_TIMEOUT_MS=15000 (optional request timeout)
 `);
   process.exit(code);
 }
@@ -48,6 +50,12 @@ function parseArgs(args) {
   return out;
 }
 
+function clampInt(v, dflt, min, max) {
+  const n = v == null || v === '' ? dflt : Number(v);
+  if (!Number.isFinite(n)) usage(2, `amap: invalid number: ${v}`);
+  return Math.min(max, Math.max(min, Math.trunc(n)));
+}
+
 function pick(obj, keys) {
   const o = {};
   for (const k of keys) if (obj[k] !== undefined) o[k] = obj[k];
@@ -60,13 +68,19 @@ async function httpGet(url, params) {
     if (v === undefined || v === null || v === '') continue;
     u.searchParams.set(k, String(v));
   }
-  const res = await fetch(u);
+  const res = await fetch(u, { signal: AbortSignal.timeout(TIMEOUT_MS) });
   const text = await res.text();
   let json;
   try { json = JSON.parse(text); } catch { json = { raw: text }; }
   if (!res.ok) {
     const err = new Error(`HTTP ${res.status}`);
     err.detail = json;
+    throw err;
+  }
+  // AMap signals business errors with HTTP 200 + status "0" (e.g. INVALID_USER_KEY, DAILY_QUERY_OVER_LIMIT).
+  if (json && json.status === '0') {
+    const err = new Error(`AMap error ${json.infocode || ''}: ${json.info || 'unknown'}`);
+    err.detail = pick(json, ['status', 'info', 'infocode']);
     throw err;
   }
   return json;
@@ -110,8 +124,8 @@ async function cmdPoi(rest, flags) {
   const keywords = rest.join(' ').trim();
   if (!keywords) usage(2, 'amap poi: missing <keywords>');
 
-  const limit = Math.min(Number(flags.limit || 10), 25);
-  const page = Number(flags.page || 1);
+  const limit = clampInt(flags.limit, 10, 1, 25);
+  const page = clampInt(flags.page, 1, 1, 100);
 
   const json = await httpGet('https://restapi.amap.com/v3/place/text', {
     key,
@@ -135,9 +149,9 @@ async function cmdAround(flags) {
   const lat = flags.lat, lng = flags.lng;
   if (!lat || !lng) usage(2, 'amap around: require --lat and --lng');
 
-  const limit = Math.min(Number(flags.limit || 10), 25);
-  const page = Number(flags.page || 1);
-  const radius = Number(flags.radius || 3000);
+  const limit = clampInt(flags.limit, 10, 1, 25);
+  const page = clampInt(flags.page, 1, 1, 100);
+  const radius = clampInt(flags.radius, 3000, 1, 50000);
 
   const json = await httpGet('https://restapi.amap.com/v3/place/around', {
     key,

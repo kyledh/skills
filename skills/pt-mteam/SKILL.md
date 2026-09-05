@@ -17,25 +17,23 @@ homepage: https://wiki.m-team.cc/zh-tw/api
 
 ## 2) 快速调用（CLI）
 
+脚本从环境变量 `MTEAM_API_KEY` 读取密钥（不要把密钥写进命令行参数）；`--base` 默认 `https://api.m-team.cc`，可用 `MTEAM_API_BASE` 或 `--base` 切换到备用域名。
+
 ```bash
-python3 scripts/mteam_api_probe.py \
-  --base https://api.m-team.cc \
-  --api-key "$MTEAM_API_KEY" \
-  --method POST \
-  --path /api/member/profile \
-  --json '{}'
+export MTEAM_API_KEY=...
+python3 scripts/mteam_api_probe.py --method POST --path /api/member/profile --json '{}'
 ```
 
-POST 示例：
+搜索示例：
 
 ```bash
 python3 scripts/mteam_api_probe.py \
-  --base https://api.m-team.cc \
-  --api-key "$MTEAM_API_KEY" \
   --method POST \
   --path /api/torrent/search \
   --json '{"keyword":"test","pageNumber":1,"pageSize":20}'
 ```
+
+输出：第一行是 `{"ok":..,"status":..,"elapsedMs":..}` 元信息，第二行起是原始响应体。退出码：0 成功，1 请求失败，2 参数/护栏拦截，3 鉴权失败。限流状态存放在 `~/.cache/pt-mteam-rate.json`（依赖 POSIX 文件锁，仅 macOS/Linux）。
 
 ## 3) 护栏（必须遵守）
 
