@@ -1,4 +1,4 @@
 # All optional: install only the providers you use. okx needs nothing beyond stdlib.
-ib-insync      # --provider ibkr
 longport       # --provider longbridge
 yfinance       # --provider yfinance
+ib-insync      # --provider ibkr

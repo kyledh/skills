@@ -8,7 +8,7 @@ Monorepo of agent skills (plain `SKILL.md` + scripts; works with any agent that 
 | --- | --- | --- |
 | `skills/12306-train` | 12306 direct/transfer ticket query, prices, route (stops) | none |
 | `skills/amap-spaces` | AMap (Gaode) Web Service API CLI (`amap`): POI / geocode / route | `AMAP_API_KEY` |
-| `skills/market-financial` | Unified quotes for crypto / stocks / options / kline via OKX, IBKR, Longbridge, yfinance | `LONGPORT_*` (Longbridge only), `IBKR_*` optional |
+| `skills/market-quote` | Quotes, option chains, candles and cross-source compare for crypto / HK-US stocks via OKX, Longbridge, Yahoo, IBKR | `LONGPORT_*` (Longbridge only), `IBKR_*` optional |
 | `skills/pt-mteam` | M-Team PT public API client with rate limiting and endpoint guardrails | `MTEAM_API_KEY` |
 
 ## Layout conventions
