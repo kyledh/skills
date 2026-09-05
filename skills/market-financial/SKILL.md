@@ -28,7 +28,7 @@ python3 scripts/market_quote.py --provider longbridge --symbol 3690.HK --asset k
 ## 常用参数
 
 - `--provider` 可选：`okx|ibkr|longbridge|yfinance`
-  - 不传 `--provider` 时按 `~/.openclaw/openclaw.json` 的 routes 自动路由
+  - 不传 `--provider` 时按路由配置自动选择（默认加密货币走 `okx`，股票/期权走 `longbridge`），配置方式见 `references/providers.md`
 - `--symbol` 必填：如 `COIN`、`AAPL.US`、`BTC-USDT`
 - `--asset` 可选：`spot|stock|option|kline`（默认 `spot`）
 - 期权参数：`--expiry YYYY-MM-DD --strike 300 --right call|put`
@@ -38,7 +38,7 @@ python3 scripts/market_quote.py --provider longbridge --symbol 3690.HK --asset k
 
 ## 渠道前置配置
 
-先看：`references/providers.md`
+先看：`references/providers.md`。依赖按需安装：`pip install -r requirements.txt`（`okx` 无需额外依赖）。
 
 关键环境变量：
 - IBKR: `IBKR_HOST` `IBKR_PORT` `IBKR_CLIENT_ID`

@@ -65,7 +65,7 @@ python3 scripts/query_transfer.py --date 2026-02-25 --from 密云 --to 锦州 --
 
 - Prefer using Chinese station names in user-facing prompts; the script will map to station codes.
 - If the user provides an ambiguous station name, run station search via `scripts/stations.py --search` and ask a clarification.
-- If the user **does not provide a date**, you may query using **today** (default) and **explicitly remind** them that different dates may differ; then ask which date they want if they need accuracy.
+- If the user **does not provide a date**, the scripts default to **tomorrow**; **explicitly remind** them that different dates may differ, then ask which date they want if they need accuracy.
 - Keep results concise: list top trains (earliest few, shortest duration, or user-specified filters).
 
 ## Troubleshooting

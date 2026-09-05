@@ -348,23 +348,35 @@ def fetch_longbridge_option(symbol: str, expiry: str, strike: float, right: str)
 
 
 
-def _load_routes_from_openclaw():
-    paths = [
-        os.path.expanduser("~/.openclaw/openclaw.json"),
-        "/Users/kyle/.openclaw/openclaw.json",
-    ]
-    for fp in paths:
+ROUTES_FILE_ENV = "MARKET_ROUTES_FILE"
+ROUTES_JSON_ENV = "MARKET_ROUTES_JSON"
+DEFAULT_ROUTES_FILE = "~/.config/market-financial/routes.json"
+
+
+def _load_routes():
+    """Load provider routing config.
+
+    Priority: $MARKET_ROUTES_JSON (inline JSON) > $MARKET_ROUTES_FILE > ~/.config/market-financial/routes.json.
+    Missing/invalid config -> {} (built-in defaults apply). See references/providers.md for the schema.
+    """
+    inline = os.getenv(ROUTES_JSON_ENV)
+    if inline:
         try:
-            with open(fp, "r", encoding="utf-8") as f:
-                obj = json.load(f)
-            return (((obj.get("skills") or {}).get("entries") or {}).get("market-financial") or {}).get("config", {}).get("routes", {})
+            obj = json.loads(inline)
+            return obj if isinstance(obj, dict) else {}
         except Exception:
-            continue
-    return {}
+            return {}
+    fp = os.path.expanduser(os.getenv(ROUTES_FILE_ENV) or DEFAULT_ROUTES_FILE)
+    try:
+        with open(fp, "r", encoding="utf-8") as f:
+            obj = json.load(f)
+        return obj if isinstance(obj, dict) else {}
+    except Exception:
+        return {}
 
 
 def _route_provider(symbol: str, asset: str):
-    routes = _load_routes_from_openclaw()
+    routes = _load_routes()
     sym = (symbol or "").upper()
     is_crypto = "-" in sym and (sym.endswith("USDT") or sym.endswith("USDC") or "SWAP" in sym)
 

@@ -1,4 +1,12 @@
-**/.cache/
+# python
 **/__pycache__/
 **/*.pyc
+**/.venv/
+
+# runtime cache
+**/.cache/
+
+# os/editor
 .DS_Store
+.idea/
+.vscode/

@@ -76,6 +76,7 @@ python3 scripts/query_transfer.py --date 2026-02-25 --from 密云 --to 锦州 --
 - `scripts/stations.py`：站点搜索/解析辅助
 - `scripts/query_tickets.py`：直达查询
 - `scripts/query_transfer.py`：中转换乘查询
+- `scripts/query_route_stations.py`：车次经停站查询
 - `SKILL.md`：skill 定义与使用说明
 
 ## License

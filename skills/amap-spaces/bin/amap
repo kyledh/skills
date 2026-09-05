@@ -25,21 +25,8 @@ Env:
 }
 
 function getKey() {
-  // Prefer env var (easy to override / safest for automation), but allow fallback
-  // to OpenClaw config: ~/.openclaw/openclaw.json -> skills.entries["amap-web"].apiKey
-  let key = env.AMAP_API_KEY;
-  if (!key) {
-    try {
-      const fs = require('node:fs');
-      const os = require('node:os');
-      const path = require('node:path');
-      const p = path.join(os.homedir(), '.openclaw', 'openclaw.json');
-      const raw = fs.readFileSync(p, 'utf8');
-      const cfg = JSON.parse(raw);
-      key = cfg?.skills?.entries?.['amap-web']?.apiKey;
-    } catch {}
-  }
-  if (!key) usage(2, 'amap: missing api key (set AMAP_API_KEY or skills.entries["amap-web"].apiKey in ~/.openclaw/openclaw.json)');
+  const key = env.AMAP_API_KEY;
+  if (!key) usage(2, 'amap: missing api key (set AMAP_API_KEY)');
   return key;
 }
 

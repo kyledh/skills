@@ -2,13 +2,6 @@
 name: pt-mteam
 description: Access M-Team PT public API with x-api-key authentication for member/profile stats and torrent-related calls. Use when building scripts, bots, indexers, or automations that query M-Team data safely with rate limiting and allowed-endpoint guardrails.
 homepage: https://wiki.m-team.cc/zh-tw/api
-metadata:
-  {
-    "openclaw": {
-      "requires": { "env": ["MTEAM_API_KEY"] },
-      "primaryEnv": "MTEAM_API_KEY"
-    }
-  }
 ---
 
 # pt-mteam
@@ -19,10 +12,8 @@ metadata:
 
 - 已在 M-Team 控制台获取 Access Token（API Key）
 - 通过请求头传递：`x-api-key: <YOUR_TOKEN>`
-- API Base 建议优先：`https://api.m-team.cc`
-
+- API Base 建议优先：`https://api.m-team.cc`，可选备用：`https://api.m-team.io`
 - 脚本默认附带 `user-agent: Mozilla/5.0`（降低被 Cloudflare 1010 风控拦截概率）
-- 可选备用：`https://api.m-team.io`
 
 ## 2) 快速调用（CLI）
 

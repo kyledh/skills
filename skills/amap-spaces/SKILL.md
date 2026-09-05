@@ -2,22 +2,6 @@
 name: amap-spaces
 description: Query AMap (Gaode) Web Service APIs for POI search, nearby search, geocode, reverse geocode, and details via a fast CLI.
 homepage: https://lbs.amap.com/
-metadata:
-  {
-    "openclaw": {
-      "requires": { "bins": ["amap"], "env": ["AMAP_API_KEY"] },
-      "primaryEnv": "AMAP_API_KEY",
-      "install": [
-        {
-          "id": "local-node",
-          "kind": "node",
-          "package": "(local)",
-          "bins": ["amap"],
-          "label": "Use bundled amap CLI (node script)"
-        }
-      ]
-    }
-  }
 ---
 
 # amap-spaces (高德 Web API)

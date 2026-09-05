@@ -1,5 +1,7 @@
 # Providers 配置
 
+一次安装全部可选依赖：`pip install -r requirements.txt`（建议在 `skills/market-financial/.venv` 中）。
+
 ## 1) OKX（公共接口）
 
 无需 API key（查询 ticker）。
@@ -53,10 +55,30 @@ pip install longport
 安装：
 
 ```bash
-source .venv/bin/activate
 pip install yfinance
 ```
 
 说明：
 - 免费免 API key。
 - 当前建议用于期权查询兜底（当 Longbridge USOption 权限不可用时）。
+
+## 5) 自动路由配置（可选）
+
+不传 `--provider` 时，脚本按下面顺序读取路由配置；都没有则用内置默认（crypto → `okx`，equity → `longbridge`，无兜底）：
+
+1. 环境变量 `MARKET_ROUTES_JSON`（内联 JSON）
+2. 环境变量 `MARKET_ROUTES_FILE` 指向的 JSON 文件
+3. `~/.config/market-financial/routes.json`
+
+示例：
+
+```json
+{
+  "crypto": { "spot": "okx" },
+  "equity": { "stock": "longbridge", "option": "longbridge", "kline": "longbridge" },
+  "fallback": { "option": ["yfinance"], "stock": ["ibkr", "yfinance"] }
+}
+```
+
+- `crypto` / `equity`：按 `--asset` 选主渠道，缺省回落到 `spot` / `stock` 的值。
+- `fallback`：主渠道失败时按顺序尝试的渠道列表。
