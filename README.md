@@ -7,7 +7,6 @@ Monorepo of agent skills (plain `SKILL.md` + scripts; works with any agent that 
 | Skill | What it does | Required env |
 | --- | --- | --- |
 | `skills/12306-train` | 12306 direct/transfer ticket query, prices, route (stops) | none |
-| `skills/amap-spaces` | AMap (Gaode) Web Service API CLI (`amap`): POI / geocode / route | `AMAP_API_KEY` |
 | `skills/market-quote` | Quotes, option chains, candles and cross-source compare for crypto / HK-US stocks via OKX, Longbridge, Yahoo, IBKR | `LONGPORT_*` (Longbridge only), `IBKR_*` optional |
 | `skills/pt-mteam` | M-Team PT public API client with rate limiting and endpoint guardrails | `MTEAM_API_KEY` |
 
@@ -16,7 +15,10 @@ Monorepo of agent skills (plain `SKILL.md` + scripts; works with any agent that 
 - `SKILL.md` — frontmatter (`name`, `description`, optional `homepage`) followed by agent-facing usage notes.
 - `scripts/` — runnable entry points (`python3 scripts/<x>.py ...`), stdlib-only unless a `requirements.txt` says otherwise.
 - `references/` — background docs and cached data; generated caches are git-ignored.
-- `bin/` — bundled CLIs (e.g. `amap`).
+
+## Retired
+
+- `amap-spaces` (AMap CLI) was removed in favour of the official AMap MCP server: `https://mcp.amap.com/sse?key=<AMAP_API_KEY>` (or npm `@amap/amap-maps-mcp-server`), which covers the same queries plus transit, weather, distance and more.
 
 ## Notes
 
