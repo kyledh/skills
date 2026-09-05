@@ -20,7 +20,9 @@ description: Query China Railway 12306 train tickets (direct + transfer) with re
 
 ## Quick usage
 
-### 1) Update station cache (first run; then weekly)
+### 1) Station cache (automatic)
+
+The station name → code table is downloaded automatically on first use (no setup step). To refresh it later (e.g. new stations), run:
 
 ```bash
 python3 scripts/update_stations.py
@@ -73,7 +75,7 @@ python3 scripts/query_transfer.py --date 2026-02-25 --from 密云 --to 锦州 --
 
 ## Troubleshooting
 
-- If station mapping is missing/outdated: run `python3 scripts/update_stations.py`.
+- If a station is missing (new station) or the auto-download failed: run `python3 scripts/update_stations.py`.
 - If you get **HTML** (mormhweb error page):
   - reduce frequency; wait 5–15 minutes before retry
   - try a different station combo (e.g. 锦州/锦州南/锦州北)

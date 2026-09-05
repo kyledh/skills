@@ -24,10 +24,22 @@ STATIONS_JSON = REF_DIR / "stations.json"
 
 
 def load_stations() -> Dict[str, str]:
+    """Load the station cache; on first use download it automatically.
+
+    Refreshing an existing cache is manual: run scripts/update_stations.py.
+    """
     if not STATIONS_JSON.exists():
-        raise FileNotFoundError(
-            f"Missing station cache: {STATIONS_JSON}. Run update_stations.py first."
-        )
+        import sys
+        from update_stations import update_stations  # sibling module
+
+        print("[12306] station cache missing; downloading from 12306 (one-time)...", file=sys.stderr)
+        try:
+            update_stations(quiet=True)
+        except Exception as e:
+            raise FileNotFoundError(
+                f"Missing station cache {STATIONS_JSON} and auto-download failed: {e}. "
+                "Retry with: python3 scripts/update_stations.py"
+            )
     with STATIONS_JSON.open("r", encoding="utf-8") as f:
         data = json.load(f)
     # data: {"name": "CODE"}

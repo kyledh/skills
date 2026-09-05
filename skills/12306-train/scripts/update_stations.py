@@ -21,7 +21,6 @@ import urllib.request
 HERE = Path(__file__).resolve().parent
 SKILL_ROOT = HERE.parent
 REF_DIR = SKILL_ROOT / "references"
-REF_DIR.mkdir(parents=True, exist_ok=True)
 STATIONS_JSON = REF_DIR / "stations.json"
 META_JSON = REF_DIR / "stations.meta.json"
 
@@ -76,7 +75,9 @@ def parse_station_js(js: str) -> Dict[str, str]:
     return stations
 
 
-def main():
+def update_stations(quiet: bool = False) -> int:
+    """Download station_name.js, write references/stations.json (+ meta). Returns station count."""
+    REF_DIR.mkdir(parents=True, exist_ok=True)
     last_err = None
     for url in STATION_JS_CANDIDATES:
         try:
@@ -87,13 +88,20 @@ def main():
                 json.dumps({"source": url, "fetchedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "count": len(stations)}, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-            print(f"OK: wrote {len(stations)} stations to {STATIONS_JSON}")
-            return
+            if not quiet:
+                print(f"OK: wrote {len(stations)} stations to {STATIONS_JSON}")
+            return len(stations)
         except Exception as e:
             last_err = e
             continue
+    raise RuntimeError(f"Failed to update stations. Last error: {last_err}")
 
-    raise SystemExit(f"Failed to update stations. Last error: {last_err}")
+
+def main():
+    try:
+        update_stations()
+    except RuntimeError as e:
+        raise SystemExit(str(e))
 
 
 if __name__ == "__main__":
